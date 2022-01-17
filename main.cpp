@@ -85,7 +85,7 @@ int main(){
 	// char *s;
 	
 	// printf("default output device: %s\n", s);
-	Chip8 chip8;
+	Chip8 chip8 {};
 	init_chip8(&chip8, renderer);
 	
 	// float realfps ;
