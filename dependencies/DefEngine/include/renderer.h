@@ -5,6 +5,10 @@
 #include "collision.h"
 #include "window.h"
 #include "math.h"
+#include "texture.h"
+#include "memory_arena.h"
+
+
 
 namespace RendererInfo{
      static const int QUADS_PER_BATCH = 1000;
@@ -63,17 +67,12 @@ struct Renderer{
      Batch *current_batch;
      ShaderProgram default_shader_program;
      ShaderProgram current_shader;
+	 
+	 static MemoryArena main_arena;
 };
 
 
 
-struct Texture{
-     unsigned int id;
-     int width;
-     int height;
-     int channels;
-     unsigned char *data_buffer;
-};
 
 
 
@@ -86,7 +85,9 @@ void render_colored_rect(Renderer *renderer, Rect *position, V3 color, float alp
 void render_quad_to_ui(Renderer *renderer, Rect *position, Texture *texture, Rect *clip_region = NULL,  int layer = 1, bool mirror = false, float alpha_value = 255, V3 color = {1.0f,1.0f,1.0f}, bool mirrorY = false);
 void render_quad_with_shader(Renderer *renderer, Rect *position, Texture *texture, ShaderProgram shader, int layer ,Rect *clip_region = NULL , bool mirrorX = false, float alpha_value = 255, V3 color = {1.0f,1.0f,1.0f}, bool mirrorY = false);
 void change_drawing_resolution(Renderer *renderer, int width, int height);
-Texture make_texture(const char *path);
+// Texture make_texture(const char *path);
+// Texture make_texture(unsigned int channels, int width, int height);
+// void update_texture(Texture *texture);
 ShaderProgram make_shader(Renderer *renderer, const char *path_to_fragment_shader, const char *name);
 void renderer_draw(Renderer *renderer);
 void destroy_renderer(Renderer *renderer);

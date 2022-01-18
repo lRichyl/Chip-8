@@ -14,6 +14,13 @@ struct V3{
      float z = 0;
 };
 
+struct V4{
+     float x = 0;
+     float y = 0;
+     float z = 0;
+	 float w = 0;
+};
+
 struct Rect{
 	float x;
 	float y;

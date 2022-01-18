@@ -161,10 +161,12 @@ uint8_t program[] = {
 	0x50,0x10,
 	0x00,0xE0,
 	0x00,0xE0,
-	0x81,0x54,
+	0xA1,0x11,
 	0xFF,0xFF
 };
 
+static Rect r = {0, 32, 50, 20};
+static Rect r1 = {0, 30, 2, 2};
 
 static void emulator_interpret(Chip8 *chip8){
 	uint8_t  first       = program[temp_PC]; // TODO: Change to the actual PC.
@@ -173,6 +175,10 @@ static void emulator_interpret(Chip8 *chip8){
 	bool jumped = false;
 	
 	// printf("%x\n", instruction);
+	
+	static Texture t = make_texture("assets/textures/Horario.png");
+	render_quad(chip8->renderer, &r, &t, 0);
+	render_quad(chip8->renderer, &r1, &t, 0);
 	
 	if(once){
 		printf("\n");
@@ -347,8 +353,76 @@ static void emulator_interpret(Chip8 *chip8){
 					printf("Adding V%d to V%d and setting VF if carry occurs\n", y, x);
 					break;
 				}
+				
+				case 0x5:{
+					// Substract VY from VX and set VF to 0 if a borrow occurs and 1 if not.
+					uint8_t x = first  & 0x0F; 
+					uint8_t y = (second & 0xF0) >> 4;
+					uint8_t VX = chip8->V[x];
+					uint8_t VY = chip8->V[y];
+					
+					
+					if(VX > VY){
+						chip8->V[0xF] = 0x01;
+					}else{
+						chip8->V[0xF] = 0x00;
+					}
+					
+					chip8->V[x] = VX - VY;
+					printf("Substacting V%d from V%d and setting VF if a borrow doesn't occur\n", y, x);
+					break;
+				}
+				
+				case 0x6:{
+					// Set VX to VY >> 1 and set VF to the least significant bit of VX before the shift.
+					uint8_t x = first  & 0x0F; 
+					uint8_t y = (second & 0xF0) >> 4;
+					uint8_t VY = chip8->V[y];
+					
+					chip8->V[x] = VY >> 1;
+					chip8->V[0xF] = chip8->V[y] & 0x01;
+					printf("Setting V%d to V%d/2 and VF to the least significant bit before the shift\n", x, y);
+					break;
+				}
+				
+				case 0x7:{
+					// Substract VX from VY and set VF to 0 if a borrow occurs and 1 if not.
+					uint8_t x = first  & 0x0F; 
+					uint8_t y = (second & 0xF0) >> 4;
+					uint8_t VX = chip8->V[x];
+					uint8_t VY = chip8->V[y];
+					
+					chip8->V[x] = VY - VX;
+					if(VY > VX){
+						chip8->V[0xF] = 0x01;
+					}else{
+						chip8->V[0xF] = 0x00;
+					}
+					// chip8->V[0xF] = VX & 0x01;
+					printf("Substacting V%d from V%d and setting VF if a borrow doesn't occur\n", x, y);
+					break;
+				}
+				
+				case 0xE:{
+					// Set VX to VY >> 1 and set VF to the least significant bit of VX before the shift.
+					uint8_t x = first  & 0x0F; 
+					uint8_t y = (second & 0xF0) >> 4;
+					uint8_t VY = chip8->V[y];
+					
+					chip8->V[x] = VY << 1;
+					chip8->V[0xF] = (chip8->V[y] & 0x80) >> 7;
+					printf("Setting V%d to V%d/2 and VF to the most significant bit before the shift\n", x, y);
+					break;
+				}
 			}
 			
+			break;
+		}
+		
+		case 0xA000:{
+			uint16_t address = second | ((first & 0x0F) << 8);
+			chip8->I = address;
+			printf("Setting I to the lower 12 bits %x\n", address);
 			break;
 		}
 		

@@ -45,7 +45,7 @@ struct MemoryArena{
 // inline void print_arena_info(MemoryArena *arena);
 
 inline void init_memory_arena(MemoryArena *arena, uint32_t size_in_bytes){
-	arena->memory           = new char[size_in_bytes];
+	arena->memory           = new char[size_in_bytes]{};
 	arena->total_memory     = size_in_bytes;
 	arena->available_memory = size_in_bytes;
 	// printf("%X\n", arena->memory);
