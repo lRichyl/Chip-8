@@ -1,13 +1,16 @@
 #include "chip-8.h"
 #include <stdio.h>
+#include <time.h>
 
 void init_chip8(Chip8 *chip8, Renderer *renderer){
+	srand(time(NULL));
+	chip8->framebuffer = make_texture(4, 64, 32);
 	chip8->PC = 0x200;
 	chip8->stack.SP = &chip8->stack.mem[0];
 	chip8->renderer = renderer;
 	
-	chip8->V[5] = 255;
-	chip8->V[1] = 3;
+	chip8->V[0] = 0;
+	chip8->V[1] = 15;
 	
 	init_memory_arena(&arena, ARENA_SIZE);
 	// Load default FONT.
@@ -158,14 +161,17 @@ uint16_t temp_PC = 0;
 bool once = true;
 
 uint8_t program[] = {
-	0x50,0x10,
-	0x00,0xE0,
-	0x00,0xE0,
-	0xA1,0x11,
+	0xA0,0x06,
+	0xD0,0x15,
+	0x60,0x01,
+	0xFF,0x80,
+	0xFF,0x80,
+	0xFF,0x80,
+	0x80,0x00,
 	0xFF,0xFF
 };
 
-static Rect r = {0, 32, 50, 20};
+static Rect r = {0, 32, 1, 1};
 static Rect r1 = {0, 30, 2, 2};
 
 static void emulator_interpret(Chip8 *chip8){
@@ -173,12 +179,6 @@ static void emulator_interpret(Chip8 *chip8){
 	uint8_t  second      = program[temp_PC + 1];
 	uint16_t instruction = (second) | (first << 8);
 	bool jumped = false;
-	
-	// printf("%x\n", instruction);
-	
-	static Texture t = make_texture("assets/textures/Horario.png");
-	render_quad(chip8->renderer, &r, &t, 0);
-	render_quad(chip8->renderer, &r1, &t, 0);
 	
 	if(once){
 		printf("\n");
@@ -199,7 +199,6 @@ static void emulator_interpret(Chip8 *chip8){
 				case 0xEE:{
 					//Return from subroutine.
 					temp_PC = pop_from_stack(&chip8->stack);
-					// temp_PC += 2; // To go to the next instruction.
 					printf("Returned from subroutine to: %x\n", temp_PC + 2);
 					break;
 				}
@@ -420,9 +419,85 @@ static void emulator_interpret(Chip8 *chip8){
 		}
 		
 		case 0xA000:{
+			// Sets the I register to the lower 12 bits of the instruction.
 			uint16_t address = second | ((first & 0x0F) << 8);
 			chip8->I = address;
 			printf("Setting I to the lower 12 bits %x\n", address);
+			break;
+		}
+		
+		case 0xB000:{
+			// Jump to address equal to the lower 12 bits plus the value in V0.
+			uint16_t address = second | ((first & 0x0F) << 8);
+			printf("Jumping to address %x + V0: %x\n", address, chip8->V[0]);
+			address += chip8->V[0];
+			temp_PC = address;
+			jumped = true;
+			break;
+		}
+		
+		case 0xC000:{
+			// Setting the value of register VX to a random number ANDed with the lower 2 bytes.
+			uint8_t x = first  & 0x0F; 
+			uint8_t random = rand();
+			chip8->V[x] = random & second;
+			printf("Setting VX to the result of random (%x) AND %x\n", random, second);
+			break;
+		}
+		
+		case 0xD000:{
+			// Displays a sprite at position VX, VY, N bytes size(height), starting at the address stored in the register I.
+			// It XORs the current pixel being displayed with the new one and if the result is 0 VF is set to 1. 
+			//This means that if you draw the same sprite twice at the same location, the sprite will be erased.
+ 			uint8_t  x       = first  & 0x0F; 
+			uint8_t  y       = (second & 0xF0) >> 4;
+			uint8_t  bytes   = second & 0x0F;
+			uint8_t  x_pos   = chip8->V[x];
+			uint8_t  y_pos   = chip8->V[y];
+			uint16_t start_address = chip8->I;
+			printf("Start address: %x\n", start_address);
+
+			printf("Drawing a sprite at position %d, %d and setting VF if any pixel is set to unset\n", x_pos, y_pos);
+			
+			// The chip8 starts its screen coordinates at the top left corner, but in our renderer we have the point 0,0 at the 
+			// bottom down corner so we need to convert to our coordinate system.
+			// So we substract the y position from the display height.
+			
+			for(uint8_t j = 0; j < bytes; j++){
+				uint8_t current_byte = program[start_address + j];
+				printf("Current byte: %x\n", current_byte);
+				for(uint8_t i = 0; i < 8; i++){
+					uint8_t pixel_x_pos = x_pos + i;
+					uint8_t pixel_y_pos = Chip8::HEIGHT - (y_pos + j);
+					int displacement = 8 - i - 1;
+					uint8_t pixel = (current_byte & (1 << displacement)) >> (displacement);
+					printf("Pixel: %x ", pixel);
+					
+					if(pixel_x_pos >= Chip8::WIDTH)  pixel_x_pos = pixel_x_pos % Chip8::WIDTH;
+					if(pixel_y_pos >= Chip8::HEIGHT) pixel_y_pos = pixel_y_pos % Chip8::HEIGHT;
+					
+					V4 current_pixel = get_pixel(&chip8->framebuffer, V2{(float)pixel_x_pos, (float)pixel_y_pos});
+					uint8_t current_pixel_bit;
+					if(current_pixel.x == 255){
+						current_pixel_bit = 1;
+					}else if(current_pixel.x == 0){
+						current_pixel_bit = 0;
+					}
+					
+					uint8_t result = pixel ^ current_pixel_bit;
+					// printf("Result: %x\n", result);
+					if(result == 1){
+						chip8->V[0xF] = 0;
+						set_pixel(&chip8->framebuffer, V4{255,255,255,255}, V2{(float)pixel_x_pos, (float)pixel_y_pos});
+					}else if(result == 0){
+						chip8->V[0xF] = 1;
+						set_pixel(&chip8->framebuffer, V4{0,0,0,0}, V2{(float)pixel_x_pos, (float)pixel_y_pos});
+					}
+				}
+				printf("\n");
+			}
+			
+			update_texture(&chip8->framebuffer);
 			break;
 		}
 		
@@ -452,6 +527,8 @@ static void emulator_interpret(Chip8 *chip8){
 
 void emulator_loop(Chip8 *chip8){
 	emulator_interpret(chip8);
+	render_quad(chip8->renderer, NULL, &chip8->framebuffer, 0);
+	
 	renderer_draw(chip8->renderer);
     swap_buffers(chip8->renderer->window);
 	poll_events();

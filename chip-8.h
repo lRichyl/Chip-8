@@ -6,6 +6,7 @@
 static const int ARENA_SIZE = 1024;
 static MemoryArena arena;
 
+
 struct Stack{
 	static const int SIZE = 16;
 	uint16_t *SP;
@@ -14,6 +15,7 @@ struct Stack{
 
 struct Chip8{
 	Renderer *renderer;
+	Texture framebuffer;
 	
 	static const int NUM_REGISTERS = 16;
 	
@@ -27,8 +29,8 @@ struct Chip8{
 	uint8_t DT = 0x00; // Delay timer;
 	uint8_t ST = 0x00; // Sound timer;
 	
-	// const int width = 64;
-	// const int height = 32;
+	static const int WIDTH = 64;
+	static const int HEIGHT = 32;
 	
 };
 
