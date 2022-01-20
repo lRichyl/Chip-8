@@ -1,5 +1,7 @@
 #include "chip-8.h"
+#include "input.h"
 #include <stdio.h>
+#include <cmath>
 #include <time.h>
 
 void init_chip8(Chip8 *chip8, Renderer *renderer){
@@ -9,7 +11,7 @@ void init_chip8(Chip8 *chip8, Renderer *renderer){
 	chip8->stack.SP = &chip8->stack.mem[0];
 	chip8->renderer = renderer;
 	
-	chip8->V[0] = 0;
+	chip8->V[0] = 31;
 	chip8->V[1] = 15;
 	
 	init_memory_arena(&arena, ARENA_SIZE);
@@ -125,6 +127,29 @@ void init_chip8(Chip8 *chip8, Renderer *renderer){
 	chip8->mem[0x004D] = 0xF0;
 	chip8->mem[0x004E] = 0x80;
 	chip8->mem[0x004F] = 0x80;
+	
+	// Key pad values mapped to GLFW key codes.
+	
+	chip8->key_pad[0x1] = GLFW_KEY_1;
+	chip8->key_pad[0x2] = GLFW_KEY_2;
+	chip8->key_pad[0x3] = GLFW_KEY_3;
+	chip8->key_pad[0xC] = GLFW_KEY_4;
+	
+	chip8->key_pad[0x4] = GLFW_KEY_Q;
+	chip8->key_pad[0x5] = GLFW_KEY_W;
+	chip8->key_pad[0x6] = GLFW_KEY_E;
+	chip8->key_pad[0xD] = GLFW_KEY_R;
+	
+	chip8->key_pad[0x7] = GLFW_KEY_A;
+	chip8->key_pad[0x8] = GLFW_KEY_S;
+	chip8->key_pad[0x9] = GLFW_KEY_D;
+	chip8->key_pad[0xE] = GLFW_KEY_F;
+	
+	chip8->key_pad[0xA] = GLFW_KEY_Z;
+	chip8->key_pad[0x0] = GLFW_KEY_X;
+	chip8->key_pad[0xB] = GLFW_KEY_C;
+	chip8->key_pad[0xF] = GLFW_KEY_V;
+	
 }
 
 
@@ -161,9 +186,9 @@ uint16_t temp_PC = 0;
 bool once = true;
 
 uint8_t program[] = {
+	0xE0,0x9E,
 	0xA0,0x06,
 	0xD0,0x15,
-	0x60,0x01,
 	0xFF,0x80,
 	0xFF,0x80,
 	0xFF,0x80,
@@ -173,6 +198,13 @@ uint8_t program[] = {
 
 static Rect r = {0, 32, 1, 1};
 static Rect r1 = {0, 30, 2, 2};
+
+static bool is_within_screen_bounds(V2 pos){
+	if(pos.x >= 0 && pos.x < Chip8::WIDTH && pos.y >= 0 && pos.y < Chip8::HEIGHT){
+		return true;
+	}
+	return false;
+}
 
 static void emulator_interpret(Chip8 *chip8){
 	uint8_t  first       = program[temp_PC]; // TODO: Change to the actual PC.
@@ -463,41 +495,61 @@ static void emulator_interpret(Chip8 *chip8){
 			// bottom down corner so we need to convert to our coordinate system.
 			// So we substract the y position from the display height.
 			
-			for(uint8_t j = 0; j < bytes; j++){
-				uint8_t current_byte = program[start_address + j];
-				printf("Current byte: %x\n", current_byte);
-				for(uint8_t i = 0; i < 8; i++){
-					uint8_t pixel_x_pos = x_pos + i;
-					uint8_t pixel_y_pos = Chip8::HEIGHT - (y_pos + j);
-					int displacement = 8 - i - 1;
-					uint8_t pixel = (current_byte & (1 << displacement)) >> (displacement);
-					printf("Pixel: %x ", pixel);
-					
-					if(pixel_x_pos >= Chip8::WIDTH)  pixel_x_pos = pixel_x_pos % Chip8::WIDTH;
-					if(pixel_y_pos >= Chip8::HEIGHT) pixel_y_pos = pixel_y_pos % Chip8::HEIGHT;
-					
-					V4 current_pixel = get_pixel(&chip8->framebuffer, V2{(float)pixel_x_pos, (float)pixel_y_pos});
-					uint8_t current_pixel_bit;
-					if(current_pixel.x == 255){
-						current_pixel_bit = 1;
-					}else if(current_pixel.x == 0){
-						current_pixel_bit = 0;
-					}
-					
-					uint8_t result = pixel ^ current_pixel_bit;
-					// printf("Result: %x\n", result);
-					if(result == 1){
-						chip8->V[0xF] = 0;
-						set_pixel(&chip8->framebuffer, V4{255,255,255,255}, V2{(float)pixel_x_pos, (float)pixel_y_pos});
-					}else if(result == 0){
-						chip8->V[0xF] = 1;
-						set_pixel(&chip8->framebuffer, V4{0,0,0,0}, V2{(float)pixel_x_pos, (float)pixel_y_pos});
-					}
-				}
-				printf("\n");
+			if(!is_within_screen_bounds(V2 {(float)x_pos, (float)Chip8::HEIGHT - y_pos - 1})){ // If the origin is out of bounds we wrap the coordinates.
+				if(x_pos >= Chip8::WIDTH)  x_pos = (x_pos % Chip8::WIDTH);
+				if(y_pos >= Chip8::HEIGHT) y_pos = (y_pos % Chip8::HEIGHT);
 			}
 			
-			update_texture(&chip8->framebuffer);
+			for(uint8_t j = 0; j < bytes; j++){
+				uint8_t current_byte = program[start_address + j];
+				// printf("Current byte: %x\n", current_byte);
+				for(uint8_t i = 0; i < 8; i++){
+					V2 pixel_pos = {(float)x_pos + i, (float)((Chip8::HEIGHT) - (y_pos + j) - 1)};
+					
+					int displacement = 8 - i - 1;
+					uint8_t pixel = (current_byte & (1 << displacement)) >> (displacement);
+					
+					// If one of the pixels coordinates is out of bounds the pixel gets clipped. 
+					if(is_within_screen_bounds(pixel_pos)){
+						V4 current_pixel = get_pixel(&chip8->framebuffer, pixel_pos);
+						uint8_t current_pixel_bit;
+						if(current_pixel.x == 255){
+							current_pixel_bit = 1;
+						}else if(current_pixel.x == 0){
+							current_pixel_bit = 0;
+						}
+						
+						uint8_t result = pixel ^ current_pixel_bit;
+						if(result == 1){
+							chip8->V[0xF] = 0;
+							set_pixel(&chip8->framebuffer, V4{255,255,255,255}, pixel_pos);
+						}else if(result == 0){
+							chip8->V[0xF] = 1;
+							set_pixel(&chip8->framebuffer, V4{0,0,0,0}, pixel_pos);
+						}
+					}
+					
+				}
+			}
+			
+			break;
+		}
+		
+		case 0xE000:{
+			switch(second){
+				case 0x9E:{
+					// Skip the next instruction if the key corresponding to the value stored in VX is pressed.
+					uint8_t x  = first & 0x0F; 
+					uint8_t VX = chip8->V[x];
+					int32_t key_code = chip8->key_pad[VX];
+					if(IsKeyPressed(chip8->renderer->window, key_code)){
+						temp_PC += 2;
+						
+					}
+					printf("Skip next instruction if the key %x is pressed\n", VX);
+					break;
+				}
+			}
 			break;
 		}
 		
@@ -507,6 +559,8 @@ static void emulator_interpret(Chip8 *chip8){
 	
 	if(instruction == 0xFFFF){
 		once = false; // This is to avoid looping. Just for testing purposes.
+		// temp_PC = 0;
+		// jumped = true;
 	} 
 	if(once){
 		if(!jumped){

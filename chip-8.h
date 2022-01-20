@@ -18,6 +18,9 @@ struct Chip8{
 	Texture framebuffer;
 	
 	static const int NUM_REGISTERS = 16;
+	static const int WIDTH = 64;
+	static const int HEIGHT = 32;
+	static const int NUM_KEYS = 16;
 	
 	uint8_t  mem[0x1000];
 	uint8_t  V[NUM_REGISTERS]; // V[15] or VF is sometimes used as a flag.
@@ -29,8 +32,7 @@ struct Chip8{
 	uint8_t DT = 0x00; // Delay timer;
 	uint8_t ST = 0x00; // Sound timer;
 	
-	static const int WIDTH = 64;
-	static const int HEIGHT = 32;
+	int32_t key_pad[0xF];
 	
 };
 
