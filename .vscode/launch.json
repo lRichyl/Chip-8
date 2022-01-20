@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "(gdb) Adjuntar",
             "type": "cppdbg",
@@ -16,8 +17,8 @@
             "name": "(gdb) Iniciar",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/Chip8.exe.",
-            "args": [],
+            "program": "${workspaceFolder}/Chip8.exe",
+            "args": ["${workspaceFolder}/test_opcode.ch8"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

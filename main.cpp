@@ -28,7 +28,14 @@ void WindowResizeCallback(GLFWwindow* window, int width, int height){
      glViewport(0, 0, width, height);
 }
 
-int main(){
+int main(int argc, char **argv){
+	// First we get the name of the ROM via command line arguments.
+	if(argc > 2){
+		printf("Too many arguments, please provide only the rom's file name\n");
+		return -1;
+	}
+	const char *rom_filename = argv[1];
+	
 	srand(time(NULL));
 	Window *window;
 	//The size here is the size of the window and the initial drawing resolution.
@@ -87,6 +94,11 @@ int main(){
 	// printf("default output device: %s\n", s);
 	Chip8 chip8 {};
 	init_chip8(&chip8, renderer);
+	load_rom(rom_filename, &chip8);
+	
+	for(uint16_t i = 0x200; i < 0x1000; i+=2){
+		printf("%x%x\n", chip8.mem[i], chip8.mem[i + 1]);
+	}
 	
 	// float realfps ;
      while(!glfwWindowShouldClose(window->GLFWInstance)){

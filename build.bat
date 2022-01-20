@@ -1,1 +1,1 @@
-g++ -g -O0 *.cpp -o chip8.exe -Idependencies/DefEngine/include -Ldependencies/DefEngine/lib -ldefengine -lglfw3 -lmingw32 -lopengl32 -lOpenAL32 -lgdi32
+g++ -g -O0 -Wl,-subsystem,console *.cpp -o chip8.exe -Idependencies/DefEngine/include -Ldependencies/DefEngine/lib -ldefengine -lglfw3 -lmingw32 -lopengl32 -lOpenAL32 -lgdi32

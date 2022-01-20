@@ -11,13 +11,13 @@ void init_chip8(Chip8 *chip8, Renderer *renderer){
 	chip8->stack.SP = &chip8->stack.mem[0];
 	chip8->renderer = renderer;
 	
-	chip8->V[0] = 253;
-	chip8->V[1] = 15;
-	chip8->V[2] = 22;
-	chip8->V[3] = 120;
-	chip8->V[4] = 34;
+	// chip8->V[0] = 253;
+	// chip8->V[1] = 15;
+	// chip8->V[2] = 22;
+	// chip8->V[3] = 120;
+	// chip8->V[4] = 34;
 	
-	chip8->DT = 0xF;
+	// chip8->DT = 0xF;
 	
 	init_memory_arena(&arena, ARENA_SIZE);
 	// Load default FONT.
@@ -169,8 +169,8 @@ static void push_to_stack(Stack *stack, uint16_t address){
 }
 
 static uint16_t pop_from_stack(Stack *stack){
-	uint16_t popped = *(stack->SP);
 	--stack->SP;
+	uint16_t popped = *(stack->SP);
 	return popped;
 }
 
@@ -182,13 +182,11 @@ static void print_stack(Stack *stack){
 
 static void print_registers(Chip8 *chip8){
 	for(int i = 0; i < Chip8::NUM_REGISTERS; i++){
-		printf("%d ", chip8->V[i]);
+		printf("%x ", chip8->V[i]);
 	}
 	printf("\n");
 }
 
-uint16_t temp_PC = 0;
-bool once = true;
 
 uint8_t program[] = {
 	0xF4,0x65,
@@ -212,54 +210,61 @@ static bool is_within_screen_bounds(V2 pos){
 }
 
 static void emulator_interpret(Chip8 *chip8){
-	uint8_t  first       = program[temp_PC]; // TODO: Change to the actual PC.
-	uint8_t  second      = program[temp_PC + 1];
+	uint8_t  first       = chip8->mem[chip8->PC];
+	uint8_t  second      = chip8->mem[chip8->PC + 1];
 	uint16_t instruction = (second) | (first << 8);
 	bool jumped = false;
 	
-	if(once){
-		printf("\n");
+	// if(once){
+		// printf("\n");
 		printf("Instruction %x\n", instruction);
 		// print_stack(&chip8->stack);
 		
-	}
+	// }
 	
 	switch(instruction & 0xF000){
 		case 0x0000:{
 			switch(second){
 				case 0xE0:{
 					//Clear the screen.
+					clear_texture(&chip8->framebuffer);
 					printf("Screen cleared\n");
 					break;
 				}
 				
 				case 0xEE:{
 					//Return from subroutine.
-					temp_PC = pop_from_stack(&chip8->stack);
-					printf("Returned from subroutine to: %x\n", temp_PC + 2);
+					chip8->PC = pop_from_stack(&chip8->stack);
+					// jumped = true;
+					// chip8->PC += 2;
+					printf("Returned from subroutine to: %x\n", chip8->PC + 2);
 					break;
 				}
 			}
 			
 			break;
 		}
+		// static uint16_t last_address = 0;
 		case 0x1000:{
 			// Jump to address. 
 			uint8_t high = first & 0x0F;
-			temp_PC = (high << 8) | second;
-			printf("Jumping to address: %x\n", temp_PC);
+			chip8->PC = (high << 8) | second;
+			printf("Jumping to address: %x\n", chip8->PC);
 			jumped = true;
 			
+			// if(last_address == chip8->PC && chip8->PC != 0) jumped = false;
+			
+			// last_address = chip8->PC;
 			break;
 		}
 		
 		case 0x2000:{
 			// Executes subroutine. Pushes the current address to the stack.
-			push_to_stack(&chip8->stack, temp_PC);
+			push_to_stack(&chip8->stack, chip8->PC);
 			
 			uint8_t high = first & 0x0F;
-			temp_PC = (high << 8) | second;
-			printf("Executing subroutine at: %x\n", temp_PC);
+			chip8->PC = (high << 8) | second;
+			printf("Executing subroutine at: %x\n", chip8->PC);
 			jumped = true;
 			
 			break;
@@ -270,7 +275,7 @@ static void emulator_interpret(Chip8 *chip8){
 			uint8_t x = first & 0x0F;
 			uint8_t VX = chip8->V[x];
 			if(VX == second){
-				temp_PC += 2;
+				chip8->PC += 2;
 				printf("Skipping next instruction\n");
 			}
 			
@@ -282,7 +287,7 @@ static void emulator_interpret(Chip8 *chip8){
 			uint8_t x = first & 0x0F; 
 			uint8_t VX = chip8->V[x];
 			if(VX != second){
-				temp_PC += 2;
+				chip8->PC += 2;
 				printf("Skipping next instruction\n");
 			}
 			
@@ -290,14 +295,14 @@ static void emulator_interpret(Chip8 *chip8){
 		}
 		
 		case 0x5000:{
-			// Skip the next instrucion if the value of VX is different than VY.
+			// Skip the next instrucion if the value of VX is equal to the value in VY.
 			uint8_t x = first  & 0x0F; 
 			uint8_t y = (second & 0xF0) >> 4;
 			
 			uint8_t VX = chip8->V[x];
 			uint8_t VY = chip8->V[y];
 			if(VX == VY){
-				temp_PC += 2;
+				chip8->PC += 2;
 				printf("Skipping next instruction\n");
 			}
 			
@@ -354,7 +359,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t VY = chip8->V[y];
 					
 					chip8->V[x] = VX & VY;
-					printf("Assigning V%d to V%d AND V%d\n", y, x, y);
+					printf("Assigning V%d to V%d AND V%d\n", x, x, y);
 					break;
 				}
 				
@@ -366,7 +371,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t VY = chip8->V[y];
 					
 					chip8->V[x] = VX ^ VY;
-					printf("Assigning V%d to V%d XOR V%d\n", y, x, y);
+					printf("Assigning V%d to V%d XOR V%d\n", x, x, y);
 					break;
 				}
 				
@@ -376,7 +381,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t y = (second & 0xF0) >> 4;
 					uint8_t VX = chip8->V[x];
 					uint8_t VY = chip8->V[y];
-					uint16_t sum_with_carry = VX + VY;
+					uint16_t sum_with_carry = (uint16_t)VX + (uint16_t)VY;
 					
 					
 					if(sum_with_carry >> 8){
@@ -400,8 +405,12 @@ static void emulator_interpret(Chip8 *chip8){
 					
 					if(VX > VY){
 						chip8->V[0xF] = 0x01;
-					}else{
+					}else if(VY > VX){
 						chip8->V[0xF] = 0x00;
+					}
+					
+					if(VX == VY){
+						chip8->V[0xF] = 0x01;
 					}
 					
 					chip8->V[x] = VX - VY;
@@ -412,12 +421,13 @@ static void emulator_interpret(Chip8 *chip8){
 				case 0x6:{
 					// Set VX to VY >> 1 and set VF to the least significant bit of VX before the shift.
 					uint8_t x = first  & 0x0F; 
-					uint8_t y = (second & 0xF0) >> 4;
-					uint8_t VY = chip8->V[y];
+					// uint8_t y = (second & 0xF0) >> 4;
+					// uint8_t VY = chip8->V[y];
 					
-					chip8->V[x] = VY >> 1;
-					chip8->V[0xF] = chip8->V[y] & 0x01;
-					printf("Setting V%d to V%d/2 and VF to the least significant bit before the shift\n", x, y);
+					// chip8->V[x] = chip8->V[y];
+					chip8->V[0xF] = chip8->V[x] & 0x01;
+					chip8->V[x] = chip8->V[x] >> 1;
+					printf("Setting V%d to V%d/2 and VF to the least significant bit before the shift\n", x, x);
 					break;
 				}
 				
@@ -431,8 +441,11 @@ static void emulator_interpret(Chip8 *chip8){
 					chip8->V[x] = VY - VX;
 					if(VY > VX){
 						chip8->V[0xF] = 0x01;
-					}else{
+					}else if(VX > VY){
 						chip8->V[0xF] = 0x00;
+					}
+					if(VX == VY){
+						chip8->V[0xF] = 0x01;
 					}
 					// chip8->V[0xF] = VX & 0x01;
 					printf("Substacting V%d from V%d and setting VF if a borrow doesn't occur\n", x, y);
@@ -440,18 +453,32 @@ static void emulator_interpret(Chip8 *chip8){
 				}
 				
 				case 0xE:{
-					// Set VX to VY >> 1 and set VF to the least significant bit of VX before the shift.
+					// Set VX to VY and then << 1 and set VF to the most significant bit of VX before the shift.
 					uint8_t x = first  & 0x0F; 
-					uint8_t y = (second & 0xF0) >> 4;
-					uint8_t VY = chip8->V[y];
+					// uint8_t y = (second & 0xF0) >> 4;
+					// uint8_t VY = chip8->V[y];
 					
-					chip8->V[x] = VY << 1;
-					chip8->V[0xF] = (chip8->V[y] & 0x80) >> 7;
-					printf("Setting V%d to V%d/2 and VF to the most significant bit before the shift\n", x, y);
+					// chip8->V[x] = chip8->V[y];
+					chip8->V[0xF] = (chip8->V[x] & 0x80) >> 7;
+					chip8->V[x] = chip8->V[x] << 1;
+					printf("Setting V%d to %x and VF to the most significant bit before the shift\n", x, chip8->V[x]);
 					break;
 				}
 			}
 			
+			break;
+		}
+		
+		case 0x9000:{
+			// Skip the next instruction if the value in VX is different than the value in VY.
+			uint8_t x = first  & 0x0F;
+			uint8_t y = (second & 0xF0) >> 4;
+			
+			if(chip8->V[x] != chip8->V[y]){
+				chip8->PC += 2;
+			}
+			
+			printf("Skipping the next instruction if V%d is different than V%d\n", x, y);
 			break;
 		}
 		
@@ -466,9 +493,10 @@ static void emulator_interpret(Chip8 *chip8){
 		case 0xB000:{
 			// Jump to address equal to the lower 12 bits plus the value in V0.
 			uint16_t address = second | ((first & 0x0F) << 8);
-			printf("Jumping to address %x + V0: %x\n", address, chip8->V[0]);
+			// uint8_t x = first  & 0x0F; 
 			address += chip8->V[0];
-			temp_PC = address;
+			printf("Jumping to address %x + V%d: %x\n", address, address, chip8->V[0]);
+			chip8->PC = address;
 			jumped = true;
 			break;
 		}
@@ -500,13 +528,14 @@ static void emulator_interpret(Chip8 *chip8){
 			// bottom down corner so we need to convert to our coordinate system.
 			// So we substract the y position from the display height.
 			
+			bool set_VF = false;
 			if(!is_within_screen_bounds(V2 {(float)x_pos, (float)Chip8::HEIGHT - y_pos - 1})){ // If the origin is out of bounds we wrap the coordinates.
 				if(x_pos >= Chip8::WIDTH)  x_pos = (x_pos % Chip8::WIDTH);
 				if(y_pos >= Chip8::HEIGHT) y_pos = (y_pos % Chip8::HEIGHT);
 			}
 			
 			for(uint8_t j = 0; j < bytes; j++){
-				uint8_t current_byte = program[start_address + j];
+				uint8_t current_byte = chip8->mem[start_address + j];
 				// printf("Current byte: %x\n", current_byte);
 				for(uint8_t i = 0; i < 8; i++){
 					V2 pixel_pos = {(float)x_pos + i, (float)((Chip8::HEIGHT) - (y_pos + j) - 1)};
@@ -526,16 +555,25 @@ static void emulator_interpret(Chip8 *chip8){
 						
 						uint8_t result = pixel ^ current_pixel_bit;
 						if(result == 1){
-							chip8->V[0xF] = 0;
+							// set_VF = false;
 							set_pixel(&chip8->framebuffer, V4{255,255,255,255}, pixel_pos);
 						}else if(result == 0){
-							chip8->V[0xF] = 1;
+							set_VF = true;
 							set_pixel(&chip8->framebuffer, V4{0,0,0,0}, pixel_pos);
 						}
 					}
 					
 				}
 			}
+			if(set_VF){
+				chip8->V[0xF] = 1;
+			}else{
+				chip8->V[0xF] = 0;
+			}
+			
+			render_quad(chip8->renderer, NULL, &chip8->framebuffer, 0);
+			renderer_draw(chip8->renderer);
+			swap_buffers(chip8->renderer->window);
 			
 			break;
 		}
@@ -548,7 +586,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t VX = chip8->V[x];
 					int32_t key_code = chip8->key_pad[VX];
 					if(IsKeyPressed(chip8->renderer->window, key_code)){
-						temp_PC += 2;
+						chip8->PC += 2;
 						
 					}
 					printf("Skip next instruction if the key %x is pressed\n", VX);
@@ -561,7 +599,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t VX = chip8->V[x];
 					int32_t key_code = chip8->key_pad[VX];
 					if(!IsKeyPressed(chip8->renderer->window, key_code)){
-						temp_PC += 2;
+						chip8->PC += 2;
 						
 					}
 					printf("Skip next instruction if the key %x is not pressed\n", VX);
@@ -584,7 +622,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t x = first & 0x0F;
 					// chip8->V[x] = chip8->DT;
 					while(true){
-						for(int i = 0; i < Chip8::NUM_KEYS; i++){
+						for(int i = 0; i <= Chip8::NUM_KEYS; i++){
 							int32_t key_code = chip8->key_pad[i];
 							if(IsKeyPressed(chip8->renderer->window, key_code)){
 								chip8->V[x] = i;
@@ -622,7 +660,7 @@ static void emulator_interpret(Chip8 *chip8){
 				case 0x29:{
 					uint8_t x = first & 0x0F;
 					chip8->I = chip8->V[x] * 5;
-					printf("Set the value of register I to the address of the corresponding font character of the digit stored in V%d", x);
+					printf("Set the value of register I to the address of the corresponding font character of the digit stored in V%d Address: %x\n", x, chip8->I);
 					break;
 				}
 				
@@ -631,7 +669,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t VX = chip8->V[x];
 					
 					uint8_t hundreds =  VX / 100;
-					uint8_t tens     = (VX % 100) / 10;
+					uint8_t tens     = (VX / 10) % 10;
 					uint8_t units    = ((VX % 100) % 10);
 					
 					uint16_t I = chip8->I;
@@ -655,6 +693,7 @@ static void emulator_interpret(Chip8 *chip8){
 					for(int i = 0; i <= x; i++){
 						printf("%d, ", chip8->mem[I + i]);
 					}
+					chip8->I += x + 1;
 					printf("\n");
 					break;
 				}
@@ -671,6 +710,7 @@ static void emulator_interpret(Chip8 *chip8){
 					for(int i = 0; i <= x; i++){
 						printf("%d, ", chip8->mem[I + i]);
 					}
+					chip8->I += x + 1;
 					printf("\n");
 					break;
 				}
@@ -678,38 +718,75 @@ static void emulator_interpret(Chip8 *chip8){
 			
 			break;
 		}
-		
+		default:
+			printf("Unknown instruction\n");
+			exit(-1);
 	}
 	
 	
 	
-	if(instruction == 0xFFFF){
-		once = false; // This is to avoid looping. Just for testing purposes.
-		// temp_PC = 0;
+	// if(instruction == 0xFFFF){
+		// once = false; // This is to avoid looping. Just for testing purposes.
+		// chip8->PC = 0;
 		// jumped = true;
-	} 
-	if(once){
-		if(!jumped){
-			print_registers(chip8);
-			temp_PC += 2; //Go to the next instruction. CHANGE THIS TO ACTUAL PC.
+	// } 
+	// if(once){
+	if(!jumped){
+		print_registers(chip8);
+		chip8->PC += 2; //Go to the next instruction. CHANGE THIS TO ACTUAL PC.
 			// printf("Increase PC\n");
-		}
-		
 	}
+		
+	// }
 	
 	
 	
-	// Decreasing the delay and sound timers.
-	if(chip8->DT != 0) chip8->DT--;
-	if(chip8->ST != 0) chip8->ST--;
+	
 }
 
 
 void emulator_loop(Chip8 *chip8){
-	emulator_interpret(chip8);
-	render_quad(chip8->renderer, NULL, &chip8->framebuffer, 0);
+	// The main loop executes at 60Hz. So we execute 8 instuctions in one cycle which means that the instructions
+	// get executed at a rate of 480Hz. This is done to get a comfortable speed for playing games.
+	for(int i = 0; i < 8; i++){
+		emulator_interpret(chip8);
+		
+		poll_events();
+	}
+	// Decreasing the delay and sound timers.
+	if(chip8->DT != 0) chip8->DT--;
+	if(chip8->ST != 0) chip8->ST--;
 	
-	renderer_draw(chip8->renderer);
-    swap_buffers(chip8->renderer->window);
-	poll_events();
+	
+	
+	
+}
+
+void load_rom(const char *filename, Chip8 *chip8){
+	FILE *file = fopen(filename, "rb");
+	if(!file){
+		printf("File: %s could not be opened\n", filename);
+		exit(-1);
+	}
+	fseek(file, 0L, SEEK_END);
+	int size = ftell(file);
+	fseek(file, 0L, SEEK_SET);
+	// rewind(file);
+	// printf("%d\n", size);
+	
+	uint16_t counter = 0;
+	for(int i = 0; i < size; i++){
+		uint8_t byte_high = getc(file);
+		uint8_t byte_low  = getc(file);
+		
+		if(byte_high == 0xFF && byte_low == 0xFF) break;
+		// fscanf(file, "%x%x", &byte_high, &byte_low);
+		chip8->mem[0x200 + counter]     = byte_high;
+		chip8->mem[0x200 + counter + 1] = byte_low;
+		// printf("%x%x\n", chip8->mem[0x200 + counter], chip8->mem[0x200 + counter + 1]);
+		counter += 2;
+		// printf("%x\n",chip8->mem[0x200]);
+		// printf("%x%x\n", byte_high, byte_low);
+	}
+	
 }
