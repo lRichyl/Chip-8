@@ -11,8 +11,13 @@ void init_chip8(Chip8 *chip8, Renderer *renderer){
 	chip8->stack.SP = &chip8->stack.mem[0];
 	chip8->renderer = renderer;
 	
-	chip8->V[0] = 31;
+	chip8->V[0] = 253;
 	chip8->V[1] = 15;
+	chip8->V[2] = 22;
+	chip8->V[3] = 120;
+	chip8->V[4] = 34;
+	
+	chip8->DT = 0xF;
 	
 	init_memory_arena(&arena, ARENA_SIZE);
 	// Load default FONT.
@@ -186,7 +191,7 @@ uint16_t temp_PC = 0;
 bool once = true;
 
 uint8_t program[] = {
-	0xE0,0x9E,
+	0xF4,0x65,
 	0xA0,0x06,
 	0xD0,0x15,
 	0xFF,0x80,
@@ -549,7 +554,128 @@ static void emulator_interpret(Chip8 *chip8){
 					printf("Skip next instruction if the key %x is pressed\n", VX);
 					break;
 				}
+				
+				case 0xA1:{
+					// Skip the next instruction if the key corresponding to the value stored in VX is not pressed.
+					uint8_t x  = first & 0x0F; 
+					uint8_t VX = chip8->V[x];
+					int32_t key_code = chip8->key_pad[VX];
+					if(!IsKeyPressed(chip8->renderer->window, key_code)){
+						temp_PC += 2;
+						
+					}
+					printf("Skip next instruction if the key %x is not pressed\n", VX);
+					break;
+				}
 			}
+			break;
+		}
+		
+		case 0xF000:{
+			switch(second){
+				case 0x07:{
+					uint8_t x = first & 0x0F;
+					chip8->V[x] = chip8->DT;
+					printf("Storing the value of the Delay Timer in V%d\n", x);
+					break;
+				}
+				
+				case 0x0A:{
+					uint8_t x = first & 0x0F;
+					// chip8->V[x] = chip8->DT;
+					while(true){
+						for(int i = 0; i < Chip8::NUM_KEYS; i++){
+							int32_t key_code = chip8->key_pad[i];
+							if(IsKeyPressed(chip8->renderer->window, key_code)){
+								chip8->V[x] = i;
+								goto key_pressed;
+							}	
+						}
+						poll_events();
+					}
+					key_pressed:
+					
+					printf("Waited for a key press and stored the result in V%d\n", x);
+					break;
+				}
+				
+				case 0x15:{
+					uint8_t x = first & 0x0F;
+					chip8->DT = chip8->V[x];
+					printf("Set the Delay Timer to the value in V%d\n", x);
+					break;
+				}
+				
+				case 0x18:{
+					uint8_t x = first & 0x0F;
+					chip8->ST = chip8->V[x];
+					printf("Set the Sound Timer to the value in V%d\n", x);
+					break;
+				}
+				
+				case 0x1E:{
+					uint8_t x = first & 0x0F;
+					chip8->I += chip8->V[x];
+					printf("Add the value of register V%d to the register I\n", x);
+				}
+				
+				case 0x29:{
+					uint8_t x = first & 0x0F;
+					chip8->I = chip8->V[x] * 5;
+					printf("Set the value of register I to the address of the corresponding font character of the digit stored in V%d", x);
+					break;
+				}
+				
+				case 0x33:{
+					uint8_t x = first & 0x0F;
+					uint8_t VX = chip8->V[x];
+					
+					uint8_t hundreds =  VX / 100;
+					uint8_t tens     = (VX % 100) / 10;
+					uint8_t units    = ((VX % 100) % 10);
+					
+					uint16_t I = chip8->I;
+					chip8->mem[I]     = hundreds;
+					chip8->mem[I + 1] = tens;
+					chip8->mem[I + 2] = units;
+					printf("Store the BCD equivalent of the value stored in V%d in the address I, I + 1, and I + 2\n", x);
+					printf("%x, %x, %x\n", chip8->mem[I], chip8->mem[I + 1], chip8->mem[I + 2]);
+					break;
+				}
+				
+				case 0x55:{
+					uint8_t  x = first & 0x0F;
+					uint16_t I = chip8->I;
+					
+					for(int i = 0; i <= x; i++){
+						chip8->mem[I + i] = chip8->V[i];
+					}
+					printf("Storing the values V0 through V%d starting at address I\n", x);
+					
+					for(int i = 0; i <= x; i++){
+						printf("%d, ", chip8->mem[I + i]);
+					}
+					printf("\n");
+					break;
+				}
+				
+				case 0x65:{
+					uint8_t  x = first & 0x0F;
+					uint16_t I = chip8->I;
+					
+					for(int i = 0; i <= x; i++){
+						chip8->V[i] = chip8->mem[I + i];
+					}
+					printf("Storing values starting at address %x in registers V0 through V%d\n", I, x);
+					
+					for(int i = 0; i <= x; i++){
+						printf("%d, ", chip8->mem[I + i]);
+					}
+					printf("\n");
+					break;
+				}
+			}
+			
 			break;
 		}
 		
