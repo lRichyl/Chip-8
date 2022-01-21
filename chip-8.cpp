@@ -384,7 +384,7 @@ static void emulator_interpret(Chip8 *chip8){
 					uint16_t sum_with_carry = (uint16_t)VX + (uint16_t)VY;
 					
 					
-					if(sum_with_carry >> 8){
+					if(sum_with_carry > 0xFF){
 						chip8->V[0xF] = 0x01;
 					}else{
 						chip8->V[0xF] = 0x00;
@@ -402,16 +402,17 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t VX = chip8->V[x];
 					uint8_t VY = chip8->V[y];
 					
-					
+					chip8->V[0xF] = 0x00;
 					if(VX > VY){
 						chip8->V[0xF] = 0x01;
-					}else if(VY > VX){
-						chip8->V[0xF] = 0x00;
 					}
+					// else if(VY > VX){
+						// chip8->V[0xF] = 0x00;
+					// }
 					
-					if(VX == VY){
-						chip8->V[0xF] = 0x01;
-					}
+					// if(VX == VY){
+						// chip8->V[0xF] = 0x01;
+					// }
 					
 					chip8->V[x] = VX - VY;
 					printf("Substacting V%d from V%d and setting VF if a borrow doesn't occur\n", y, x);
@@ -438,15 +439,17 @@ static void emulator_interpret(Chip8 *chip8){
 					uint8_t VX = chip8->V[x];
 					uint8_t VY = chip8->V[y];
 					
+					chip8->V[0xF] = 0x00;
 					chip8->V[x] = VY - VX;
 					if(VY > VX){
 						chip8->V[0xF] = 0x01;
-					}else if(VX > VY){
-						chip8->V[0xF] = 0x00;
 					}
-					if(VX == VY){
-						chip8->V[0xF] = 0x01;
-					}
+					// else if(VX > VY){
+						// chip8->V[0xF] = 0x00;
+					// }
+					// if(VX == VY){
+						// chip8->V[0xF] = 0x01;
+					// }
 					// chip8->V[0xF] = VX & 0x01;
 					printf("Substacting V%d from V%d and setting VF if a borrow doesn't occur\n", x, y);
 					break;
@@ -494,7 +497,7 @@ static void emulator_interpret(Chip8 *chip8){
 			// Jump to address equal to the lower 12 bits plus the value in V0.
 			uint16_t address = second | ((first & 0x0F) << 8);
 			// uint8_t x = first  & 0x0F; 
-			address += chip8->V[0];
+			address += (uint16_t)chip8->V[0];
 			printf("Jumping to address %x + V%d: %x\n", address, address, chip8->V[0]);
 			chip8->PC = address;
 			jumped = true;
@@ -542,6 +545,7 @@ static void emulator_interpret(Chip8 *chip8){
 					
 					int displacement = 8 - i - 1;
 					uint8_t pixel = (current_byte & (1 << displacement)) >> (displacement);
+					if(pixel == 0) continue; // If the bits is 0 we ignore it.
 					
 					// If one of the pixels coordinates is out of bounds the pixel gets clipped. 
 					if(is_within_screen_bounds(pixel_pos)){
@@ -788,5 +792,5 @@ void load_rom(const char *filename, Chip8 *chip8){
 		// printf("%x\n",chip8->mem[0x200]);
 		// printf("%x%x\n", byte_high, byte_low);
 	}
-	
+	fclose(file);
 }

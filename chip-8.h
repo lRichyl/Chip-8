@@ -8,7 +8,7 @@ static MemoryArena arena;
 
 
 struct Stack{
-	static const int SIZE = 16;
+	static const int SIZE = 17;
 	uint16_t *SP;
 	uint16_t mem[SIZE] {};
 };
