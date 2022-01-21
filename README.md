@@ -6,6 +6,7 @@
  Here you can see the original keypad distribution in the systems that ran Chip8, and below there's
  the equivalent keys for this emulator.
  
+ <pre>
 ╔═══╦═══╦═══╦═══╗  
 ║ 1 ║   2 ║   3 ║ C ║  
 ╠═══╬═══╬═══╬═══╣  
@@ -25,7 +26,7 @@
 ╠═══╬═══╬═══╬═══╣  
 ║ Z ║ X ║ C ║ V ║  
 ╚═══╩═══╩═══╩═══╝  
-
+</pre>
 # ROMS
 These are some of the tested ROMs that worked correctly on this interpreter.
 
