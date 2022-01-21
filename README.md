@@ -4,12 +4,12 @@
  #Keypad
  Here you can see the original keypad distribution in the systems that ran Chip8, and below there's
  the equivalent keys for this emulator.
-╔═══╦═══╦═══╦═══╗              
+╔═══╦═══╦═══╦═══╗ 
 ║ 1 ║ 2 ║ 3 ║ C ║
 ╠═══╬═══╬═══╬═══╣
-║ 4 ║ 5 ║ 6 ║ D ║   
+║ 4 ║ 5 ║ 6 ║ D ║
 ╠═══╬═══╬═══╬═══╣
-║ 7 ║ 8 ║ 9 ║ E ║       
+║ 7 ║ 8 ║ 9 ║ E ║
 ╠═══╬═══╬═══╬═══╣
 ║ A ║ 0 ║ B ║ F ║
 ╚═══╩═══╩═══╩═══╝
