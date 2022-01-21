@@ -31,7 +31,7 @@
 </pre>
 
 # Compiling
-To compile the emulator you need to have MinGW installed on your computer, and have g++ added to the PATH environment variable, then run the build.bat file.
+To compile the emulator you need to have MinGW installed on your computer, and have g++ added to the PATH environment variable, then run the build_release.bat file.
 
 # ROMS
 These are some of the tested ROMs that worked correctly on this interpreter.
