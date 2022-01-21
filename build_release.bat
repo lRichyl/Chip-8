@@ -1,0 +1,1 @@
+g++ -O3 -Wl,-subsystem,windows *.cpp -o chip8.exe -Idependencies/DefEngine/include -Ldependencies/DefEngine/lib -ldefengine -lglfw3 -lmingw32 -lopengl32 -lOpenAL32 -lgdi32

@@ -1,6 +1,8 @@
 # Prerequisites
 *.d
 
+/Release
+
 # Compiled Object files
 *.slo
 *.lo
@@ -20,11 +22,6 @@
 *.mod
 *.smod
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
 
 # Executables
 *.exe

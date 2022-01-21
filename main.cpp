@@ -13,19 +13,20 @@
 #include <time.h>
 #include <stdlib.h>
 
-
-
-
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_truetype.h"
 
 
-
-
 void WindowResizeCallback(GLFWwindow* window, int width, int height){
-     glViewport(0, 0, width, height);
+	glViewport(0, 0, width, height);
+}
+
+void WindowMaximizeCallback(GLFWwindow* window, int maximized){
+	int width,height;
+	glfwGetWindowSize(window, &width, &height);
+	glViewport(0, 0, width, height);
 }
 
 int main(int argc, char **argv){
@@ -40,7 +41,7 @@ int main(int argc, char **argv){
 	Window *window;
 	//The size here is the size of the window and the initial drawing resolution.
 	//The internal resolution can be set manually and it's the one used for the game calculations.
-	window = create_window(1280, 720, "Game Engine");
+	window = create_window(1280, 720, "Chip-8 Interpreter");
 	window->internalWidth  = 64;
 	window->internalHeight = 32;
 	// You should also probably change the drawing resolution with the function which is the internal resolution
@@ -72,6 +73,7 @@ int main(int argc, char **argv){
 	// Texture font = make_texture("assets/fonts/font.png");
 	// Text FPSText = Text(font, 12, V2{0,float(window->internalHeight)});
 	glfwSetWindowSizeCallback(window->GLFWInstance,WindowResizeCallback);
+	glfwSetWindowMaximizeCallback(window->GLFWInstance, WindowMaximizeCallback);
 	glfwSwapInterval(1); //This should be set to 2 if the refresh rate of a monitor is 120Hz. If it's higher we need to come up with a factor.
 	
 	SetKeyboardCallback(window);
