@@ -1,5 +1,5 @@
 # Chip-8
- A Chip-8 emulator made in C using my DefEngine library for rendering and input.
+ A Chip-8 emulator made in C using my DefEngine library for rendering and input.  
  To run a ROM you need to provide the name of the file as a command line argument (including the file extension).
  
 # Keypad
