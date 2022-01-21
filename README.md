@@ -6,8 +6,7 @@
  
  Here you can see the original keypad distribution in the systems that ran Chip8, and below there's
  the equivalent keys for this emulator.
-# Compiling
-To compile the emulator you need to have MinGW installed on your computer, and have g++ added to the PATH environment variable, then run the build.bat file.
+
  
  <pre>
 ╔═══╦═══╦═══╦═══╗  
@@ -30,6 +29,10 @@ To compile the emulator you need to have MinGW installed on your computer, and h
 ║ Z ║ X ║ C ║ V ║  
 ╚═══╩═══╩═══╩═══╝  
 </pre>
+
+# Compiling
+To compile the emulator you need to have MinGW installed on your computer, and have g++ added to the PATH environment variable, then run the build.bat file.
+
 # ROMS
 These are some of the tested ROMs that worked correctly on this interpreter.
 
