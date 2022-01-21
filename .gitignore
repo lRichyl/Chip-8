@@ -2,6 +2,8 @@
 *.d
 
 /Release
+/.vscode
+/assets
 
 # Compiled Object files
 *.slo
