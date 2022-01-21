@@ -2,6 +2,7 @@
  A Chip-8 emulator made in C using my DefEngine library for rendering.
  
  #Keypad
+ 
  Here you can see the original keypad distribution in the systems that ran Chip8, and below there's
  the equivalent keys for this emulator.
 ╔═══╦═══╦═══╦═══╗ 
